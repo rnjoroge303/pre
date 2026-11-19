@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Receipt</title>
+    <style>
+        body {
+            max-width: 680px;
+            margin: 40px auto;
+            padding: 24px;
+            font-family: Arial, sans-serif;
+            color: #54283d;
+        }
+
+        .receipt {
+            border: 1px solid #efb4ce;
+            border-radius: 16px;
+            padding: 28px;
+        }
+
+        h1 {
+            color: #c92f75;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f5d6e3;
+        }
+
+        .amount {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #c92f75;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 20px;
+            border: 0;
+            border-radius: 999px;
+            background: #c92f75;
+            color: white;
+            cursor: pointer;
+        }
+
+        @media print {
+            button {
+                display: none;
+            }
+
+            body {
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="receipt">
+        <h1>M-Pesa Payment Receipt</h1>
+        <div class="row"><span>Status</span><strong>Confirmed</strong></div>
+        <div class="row"><span>Receipt number</span><strong id="receipt-number"></strong></div>
+        <div class="row"><span>Phone number</span><strong id="phone-number"></strong></div>
+        <div class="row"><span>Recipient</span><strong id="recipient-name"></strong></div>
+        <div class="row"><span>Delivery location</span><strong id="shipping-location"></strong></div>
+        <div class="row"><span>Amount</span><strong class="amount" id="amount"></strong></div>
+        <div class="row"><span>Order ID</span><strong id="order-id"></strong></div>
+        <div class="row"><span>Product ID</span><strong id="product-id"></strong></div>
+        <div class="row"><span>Quantity</span><strong id="quantity"></strong></div>
+    </div>
+    <div class="actions">
+        <button type="button" onclick="window.print()">Print invoice</button>
+        <button type="button" id="download-pdf">Download PDF</button>
+    </div>
+    <script>
+        const data = JSON.parse(document.body.dataset.receipt || '{}');
+        document.querySelector('#receipt-number').textContent = data.mpesa_receipt || 'Pending';
+        document.querySelector('#phone-number').textContent = data.phone_number || '';
+        document.querySelector('#recipient-name').textContent = data.recipient_name || '';
+        document.querySelector('#shipping-location').textContent = data.shipping_location || '';
+        document.querySelector('#amount').textContent = `Ksh ${Number(data.amount || 0).toFixed(2)}`;
+        document.querySelector('#order-id').textContent = data.order_id || '';
+        document.querySelector('#product-id').textContent = data.product_id || '';
+        document.querySelector('#quantity').textContent = data.quantity || '';
+
+        document.querySelector('#download-pdf').addEventListener('click', () => {
+            const checkoutRequestId = encodeURIComponent(data.checkout_request_id || '');
+            if (checkoutRequestId) {
+                window.location.href = `/invoice/${checkoutRequestId}.pdf`;
+            }
+        });
+    </script>
+</body>
+
+</html>
