@@ -449,6 +449,7 @@
         const mpesaCodeForm = document.querySelector("#mpesa-code-form");
         const mpesaCodeInput = document.querySelector("#mpesa-code");
         let paymentTimeout;
+        let paymentPollInterval;
         let activeCheckoutRequestId = null;
 
         const showFieldError = (input, message) => {
@@ -515,6 +516,10 @@
         paymentForm.addEventListener("submit", async (event) => {
             event.preventDefault();
             if (!validatePaymentForm()) return;
+
+            window.clearInterval(paymentPollInterval);
+            window.clearTimeout(paymentTimeout);
+            activeCheckoutRequestId = null;
 
             paymentOverlay.hidden = false;
             paymentTitle.textContent = "Processing payment";
@@ -585,18 +590,20 @@
                 paymentTitle.textContent = "Waiting for payment";
                 paymentMessage.textContent = "Complete the payment on your phone. We’ll wait up to 1 minute for confirmation.";
 
-                const pollStatus = window.setInterval(async () => {
+                paymentPollInterval = window.setInterval(async () => {
+                    if (activeCheckoutRequestId !== checkoutRequestId) return;
                     try {
                         const statusResponse = await fetch(`/api/mpesa/status/${encodeURIComponent(checkoutRequestId)}`);
                         if (!statusResponse.ok) return;
 
                         const status = await statusResponse.json();
+                        if (activeCheckoutRequestId !== checkoutRequestId) return;
                         if (status.status === "confirmed") {
-                            window.clearInterval(pollStatus);
+                            window.clearInterval(paymentPollInterval);
                             window.clearTimeout(paymentTimeout);
                             window.confirmPaymentReceived(checkoutRequestId);
                         } else if (status.status === "failed" || status.status === "cancelled") {
-                            window.clearInterval(pollStatus);
+                            window.clearInterval(paymentPollInterval);
                             window.clearTimeout(paymentTimeout);
                             paymentTitle.textContent = status.status === "cancelled"
                                 ? "Payment cancelled"
@@ -615,6 +622,7 @@
                 }, 2500);
 
                 paymentTimeout = window.setTimeout(() => {
+                    window.clearInterval(paymentPollInterval);
                     paymentTitle.textContent = "Still waiting for confirmation";
                     paymentMessage.textContent = "Automatic confirmation hasn't arrived. You can enter your M-Pesa transaction code below for verification.";
                     paymentSpinner.hidden = true;
@@ -668,7 +676,9 @@
         });
 
         cancelPaymentButton.addEventListener("click", () => {
+            window.clearInterval(paymentPollInterval);
             window.clearTimeout(paymentTimeout);
+            activeCheckoutRequestId = null;
             paymentOverlay.hidden = true;
             mpesaCodeForm.hidden = true;
             mpesaCodeForm.reset();
@@ -680,6 +690,7 @@
 
         // Call this only after your payment provider verifies the transaction.
         window.confirmPaymentReceived = (checkoutRequestId) => {
+            window.clearInterval(paymentPollInterval);
             window.clearTimeout(paymentTimeout);
             paymentTitle.textContent = "Payment received";
             paymentMessage.textContent = "Your payment is confirmed. Opening the receipt...";

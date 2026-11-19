@@ -46,18 +46,16 @@ router.post('/api/payments', async (req, res) => {
   try {
     const result = await controller.createPayment(req.body);
 
-    const orderReference = `RWN-${req.body.orderId}`;
-
     const stkResponse = await initiateStkPush({
       phoneNumber: req.body.phoneNumber,
       amount: req.body.amount,
-      accountReference: orderReference,
-      transactionDesc: `Payment to Robert Wachira Njoroge - Order ${req.body.orderId}`
+      accountReference: 'Robert',
+      transactionDesc: 'Payment order'
     });
 
     await setPaymentStkDetails(result.insertId, stkResponse);
 
-    console.log('[Safaricom STK Push sent]', {
+    console.log('[Safaricom accepted STK Push request]', {
       paymentId: result.insertId,
       orderId: req.body.orderId,
       phoneNumber: req.body.phoneNumber,
@@ -69,7 +67,7 @@ router.post('/api/payments', async (req, res) => {
     });
 
     res.status(201).json({
-      message: 'M-Pesa prompt sent',
+      message: 'STK Push request accepted by Safaricom',
       paymentId: result.insertId,
       checkoutRequestId: stkResponse.CheckoutRequestID,
       merchantRequestId: stkResponse.MerchantRequestID
